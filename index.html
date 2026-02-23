@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <title>Marathi Writing Test</title>
+  <style>
+    :root { font-family: -apple-system, system-ui, Arial, sans-serif; }
+    body { margin: 0; background: #f6f7f8; color: #111; }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 16px; }
+    .card { background: #fff; border-radius: 14px; padding: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+    h1 { font-size: 20px; margin: 0 0 8px; }
+    .muted { color: #555; font-size: 14px; }
+    label { display: block; font-size: 14px; margin: 12px 0 6px; }
+    input { width: 100%; font-size: 18px; padding: 12px; border-radius: 12px; border: 1px solid #cfd6dd; }
+    button { font-size: 18px; padding: 12px 14px; border-radius: 12px; border: 0; background: #111; color: #fff; }
+    button.secondary { background: #e9ecef; color: #111; }
+    button:disabled { opacity: 0.5; }
+    .row { display: flex; gap: 10px; align-items: center; }
+    .row > * { flex: 1; }
+    .topbar { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 10px; }
+    .progress { font-size: 14px; color: #333; }
+    .sentence { font-size: 22px; line-height: 1.25; margin: 10px 0 12px; }
+    .padwrap { background: #fff; border: 2px solid #111; border-radius: 14px; overflow: hidden; touch-action: none; }
+    canvas { width: 100%; height: 320px; display: block; background: #fff; }
+    .actions { display: flex; gap: 10px; margin-top: 12px; }
+    .actions button { flex: 1; }
+    .divider { height: 1px; background: #eef1f4; margin: 14px 0; }
+    .ok { color: #0b6b0b; font-weight: 600; }
+    .err { color: #a40000; font-weight: 600; }
+    .small { font-size: 13px; color: #666; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div id="screenStart" class="card">
+      <h1>Marathi Writing Test</h1>
+      <div class="muted">Write the same idea in Marathi using Devanagari. Use finger or Apple Pencil.</div>
+
+      <label>Candidate number</label>
+      <input id="candidateNumber" inputmode="numeric" placeholder="Example 1001" />
+
+      <label>PIN</label>
+      <input id="pin" inputmode="numeric" placeholder="Example 1234" />
+
+      <div class="divider"></div>
+
+      <label>Apps Script Web App URL</label>
+      <input id="endpoint" placeholder="Paste your Apps Script Web App URL here" />
+
+      <div class="divider"></div>
+
+      <div class="row">
+        <button id="btnStart">Start</button>
+      </div>
+
+      <div class="divider"></div>
+      <div class="small">Tip. Add this page to the iPad Home Screen for a full screen app feel.</div>
+    </div>
+
+    <div id="screenTest" class="card" style="display:none;">
+      <div class="topbar">
+        <div>
+          <div class="progress" id="progressText">Question 1 of 10</div>
+          <div class="small" id="whoText"></div>
+        </div>
+        <button id="btnExit" class="secondary">Exit</button>
+      </div>
+
+      <div class="sentence" id="sentenceText"></div>
+
+      <div class="padwrap">
+        <canvas id="pad" width="900" height="520"></canvas>
+      </div>
+
+      <div class="actions">
+        <button id="btnBack" class="secondary">Back</button>
+        <button id="btnClear" class="secondary">Clear</button>
+        <button id="btnNext">Next</button>
+      </div>
+
+      <div class="divider"></div>
+      <div class="small">Your writing is saved automatically as you move between questions.</div>
+    </div>
+
+    <div id="screenSubmit" class="card" style="display:none;">
+      <h1>Submit</h1>
+      <div class="muted">This will upload your 10 answers.</div>
+      <div class="divider"></div>
+
+      <div class="row">
+        <button id="btnSubmit">Submit</button>
+        <button id="btnRestart" class="secondary">Restart</button>
+      </div>
+
+      <div class="divider"></div>
+      <div id="statusLine" class="muted"></div>
+    </div>
+  </div>
+
+<script>
+  const SENTENCE_BANK_60 = [
+    "I drink milk.",
+    "I go to school.",
+    "I have one sister.",
+    "I have one brother.",
+    "My name is Jay.",
+    "I live in Aurora.",
+    "I like tea.",
+    "I like coffee.",
+    "I eat rice.",
+    "I eat vegetables.",
+    "I play outside.",
+    "I read books.",
+    "I write every day.",
+    "I wake up early.",
+    "I sleep at night.",
+    "I wash my hands.",
+    "I brush my teeth.",
+    "I take a shower.",
+    "I wear a jacket.",
+    "I wear shoes.",
+    "I open the door.",
+    "I close the window.",
+    "I sit on a chair.",
+    "I stand in line.",
+    "I listen to music.",
+    "I watch TV.",
+    "I speak slowly.",
+    "I speak clearly.",
+    "I understand you.",
+    "I do not understand.",
+    "I need help.",
+    "I can do it.",
+    "I cannot do it.",
+    "I want water.",
+    "I want food.",
+    "I feel happy.",
+    "I feel tired.",
+    "I feel hungry.",
+    "I feel sick.",
+    "I am cold.",
+    "I am hot.",
+    "I have a pen.",
+    "I have a phone.",
+    "I have a bag.",
+    "This is my house.",
+    "That is my car.",
+    "Today is Sunday.",
+    "Tomorrow is Monday.",
+    "I will come back.",
+    "I will call you.",
+    "Please sit here.",
+    "Please stand up.",
+    "Please write this.",
+    "Please read this.",
+    "Give me one minute.",
+    "I have some time.",
+    "I have no time.",
+    "I like to learn.",
+    "I practice Marathi.",
+    "I respect my parents."
+  ];
+
+  const Q_COUNT = 10;
+  const JPEG_QUALITY = 0.6;
+
+  const elStart = document.getElementById("screenStart");
+  const elTest = document.getElementById("screenTest");
+  const elSubmit = document.getElementById("screenSubmit");
+
+  const candidateNumberEl = document.getElementById("candidateNumber");
+  const pinEl = document.getElementById("pin");
+  const endpointEl = document.getElementById("endpoint");
+
+  const btnStart = document.getElementById("btnStart");
+  const btnExit = document.getElementById("btnExit");
+  const btnBack = document.getElementById("btnBack");
+  const btnClear = document.getElementById("btnClear");
+  const btnNext = document.getElementById("btnNext");
+  const btnSubmit = document.getElementById("btnSubmit");
+  const btnRestart = document.getElementById("btnRestart");
+
+  const sentenceText = document.getElementById("sentenceText");
+  const progressText = document.getElementById("progressText");
+  const whoText = document.getElementById("whoText");
+  const statusLine = document.getElementById("statusLine");
+
+  const canvas = document.getElementById("pad");
+  const ctx = canvas.getContext("2d");
+
+  let selectedQuestions = [];
+  let answersDataUrls = new Array(Q_COUNT).fill(null);
+  let currentIndex = 0;
+  let isDrawing = false;
+  let lastPt = null;
+
+  function shuffleCopy(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = a[i];
+      a[i] = a[j];
+      a[j] = tmp;
+    }
+    return a;
+  }
+
+  function pickQuestions() {
+    const shuffled = shuffleCopy(SENTENCE_BANK_60);
+    return shuffled.slice(0, Q_COUNT);
+  }
+
+  function setScreen(which) {
+    elStart.style.display = which === "start" ? "block" : "none";
+    elTest.style.display = which === "test" ? "block" : "none";
+    elSubmit.style.display = which === "submit" ? "block" : "none";
+  }
+
+  function clearCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  function loadAnswer(index) {
+    clearCanvas();
+    const url = answersDataUrls[index];
+    if (!url) return;
+    const img = new Image();
+    img.onload = () => { ctx.drawImage(img, 0, 0, canvas.width, canvas.height); };
+    img.src = url;
+  }
+
+  function saveAnswer(index) {
+    answersDataUrls[index] = canvas.toDataURL("image/jpeg", JPEG_QUALITY);
+  }
+
+  function updateUI() {
+    sentenceText.textContent = selectedQuestions[currentIndex];
+    progressText.textContent = "Question " + (currentIndex + 1) + " of " + Q_COUNT;
+    btnBack.disabled = currentIndex === 0;
+    btnNext.textContent = currentIndex === Q_COUNT - 1 ? "Finish" : "Next";
+    loadAnswer(currentIndex);
+  }
+
+  function getCanvasPoint(evt) {
+    const rect = canvas.getBoundingClientRect();
+    const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+    const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+    const x = (clientX - rect.left) * (canvas.width / rect.width);
+    const y = (clientY - rect.top) * (canvas.height / rect.height);
+    return { x, y };
+  }
+
+  function startDraw(evt) {
+    evt.preventDefault();
+    isDrawing = true;
+    lastPt = getCanvasPoint(evt);
+  }
+
+  function moveDraw(evt) {
+    if (!isDrawing) return;
+    evt.preventDefault();
+    const pt = getCanvasPoint(evt);
+
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = "#111";
+    ctx.lineWidth = 10;
+
+    ctx.beginPath();
+    ctx.moveTo(lastPt.x, lastPt.y);
+    ctx.lineTo(pt.x, pt.y);
+    ctx.stroke();
+
+    lastPt = pt;
+  }
+
+  function endDraw(evt) {
+    if (!isDrawing) return;
+    evt.preventDefault();
+    isDrawing = false;
+    lastPt = null;
+  }
+
+  function validateStart() {
+    const candidate = candidateNumberEl.value.trim();
+    const pin = pinEl.value.trim();
+    const endpoint = endpointEl.value.trim();
+    if (!candidate) return false;
+    if (!pin) return false;
+    if (!endpoint) return false;
+    return true;
+  }
+
+  btnStart.addEventListener("click", () => {
+    if (!validateStart()) {
+      alert("Enter candidate number, PIN, and the Apps Script URL.");
+      return;
+    }
+    selectedQuestions = pickQuestions();
+    answersDataUrls = new Array(Q_COUNT).fill(null);
+    currentIndex = 0;
+
+    whoText.textContent = "Candidate " + candidateNumberEl.value.trim();
+    setScreen("test");
+    clearCanvas();
+    updateUI();
+  });
+
+  btnExit.addEventListener("click", () => {
+    if (confirm("Exit the test?")) setScreen("start");
+  });
+
+  btnClear.addEventListener("click", () => {
+    clearCanvas();
+    saveAnswer(currentIndex);
+  });
+
+  btnBack.addEventListener("click", () => {
+    saveAnswer(currentIndex);
+    if (currentIndex > 0) currentIndex--;
+    updateUI();
+  });
+
+  btnNext.addEventListener("click", () => {
+    saveAnswer(currentIndex);
+    if (currentIndex < Q_COUNT - 1) {
+      currentIndex++;
+      updateUI();
+      return;
+    }
+    setScreen("submit");
+    statusLine.textContent = "";
+    statusLine.className = "muted";
+  });
+
+  btnRestart.addEventListener("click", () => {
+    if (confirm("Restart for a new candidate?")) {
+      setScreen("start");
+      statusLine.textContent = "";
+      statusLine.className = "muted";
+    }
+  });
+
+  async function submitAll() {
+    const endpoint = endpointEl.value.trim();
+    const candidateNumber = candidateNumberEl.value.trim();
+    const pin = pinEl.value.trim();
+
+    for (let i = 0; i < Q_COUNT; i++) {
+      if (!answersDataUrls[i]) return { ok: false, message: "Missing answer for question " + (i + 1) + "." };
+    }
+
+    const payload = {
+      candidateNumber,
+      pin,
+      submittedAtIso: new Date().toISOString(),
+      questions: selectedQuestions,
+      imagesDataUrl: answersDataUrls
+    };
+
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    const text = await res.text();
+    let json;
+    try { json = JSON.parse(text); } catch (e) { json = { ok: false, message: "Bad response from server.", raw: text }; }
+    return json;
+  }
+
+  btnSubmit.addEventListener("click", async () => {
+    btnSubmit.disabled = true;
+    statusLine.textContent = "Uploading...";
+    statusLine.className = "muted";
+
+    try {
+      const result = await submitAll();
+      if (result && result.ok) {
+        statusLine.textContent = "Submitted successfully.";
+        statusLine.className = "ok";
+        if (result.folderUrl) {
+          try { await navigator.clipboard.writeText(result.folderUrl); } catch (e) {}
+        }
+      } else {
+        statusLine.textContent = (result && result.message) ? result.message : "Submit failed.";
+        statusLine.className = "err";
+      }
+    } catch (e) {
+      statusLine.textContent = "Submit failed.";
+      statusLine.className = "err";
+    } finally {
+      btnSubmit.disabled = false;
+    }
+  });
+
+  function initCanvas() {
+    clearCanvas();
+    canvas.addEventListener("touchstart", startDraw, { passive: false });
+    canvas.addEventListener("touchmove", moveDraw, { passive: false });
+    canvas.addEventListener("touchend", endDraw, { passive: false });
+    canvas.addEventListener("touchcancel", endDraw, { passive: false });
+
+    canvas.addEventListener("mousedown", startDraw);
+    canvas.addEventListener("mousemove", moveDraw);
+    window.addEventListener("mouseup", endDraw);
+  }
+
+  initCanvas();
+</script>
+</body>
+</html>
