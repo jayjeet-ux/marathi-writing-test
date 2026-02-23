@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>View Submission</title>
+  <style>
+    :root { font-family: -apple-system, system-ui, Arial, sans-serif; }
+    body { margin: 0; background: #f6f7f8; color: #111; }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 16px; }
+    .card { background: #fff; border-radius: 14px; padding: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+    h1 { font-size: 20px; margin: 0 0 10px; }
+    label { display: block; font-size: 14px; margin: 12px 0 6px; }
+    input { width: 100%; font-size: 18px; padding: 12px; border-radius: 12px; border: 1px solid #cfd6dd; }
+    button { font-size: 18px; padding: 12px 14px; border-radius: 12px; border: 0; background: #111; color: #fff; width: 100%; margin-top: 12px; }
+    .item { margin-top: 14px; padding-top: 14px; border-top: 1px solid #eef1f4; }
+    .q { font-size: 18px; margin-bottom: 10px; }
+    img { width: 100%; border-radius: 12px; border: 1px solid #e1e6eb; background: #fff; }
+    .muted { color: #555; font-size: 14px; }
+    .ok { color: #0b6b0b; font-weight: 600; }
+    .err { color: #a40000; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>View Submission</h1>
+
+      <label>Candidate number</label>
+      <input id="candidateNumber" inputmode="numeric" />
+
+      <label>PIN</label>
+      <input id="pin" inputmode="numeric" />
+
+      <label>Apps Script Web App URL</label>
+      <input id="endpoint" placeholder="Paste your Apps Script Web App URL here" />
+
+      <button id="btnLoad">Load</button>
+
+      <div id="status" class="muted" style="margin-top:12px;"></div>
+    </div>
+
+    <div id="results" class="card" style="display:none; margin-top:16px;">
+      <div id="meta" class="muted"></div>
+      <div id="list"></div>
+    </div>
+  </div>
+
+<script>
+  const candidateNumberEl = document.getElementById("candidateNumber");
+  const pinEl = document.getElementById("pin");
+  const endpointEl = document.getElementById("endpoint");
+  const btnLoad = document.getElementById("btnLoad");
+  const statusEl = document.getElementById("status");
+  const resultsEl = document.getElementById("results");
+  const metaEl = document.getElementById("meta");
+  const listEl = document.getElementById("list");
+
+  function setStatus(text, cls) {
+    statusEl.textContent = text;
+    statusEl.className = cls || "muted";
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+    }[c]));
+  }
+
+  async function lookup() {
+    const candidate = candidateNumberEl.value.trim();
+    const pin = pinEl.value.trim();
+    const endpoint = endpointEl.value.trim();
+    if (!candidate || !pin || !endpoint) {
+      setStatus("Enter candidate number, PIN, and the Apps Script URL.", "err");
+      return;
+    }
+
+    setStatus("Loading...", "muted");
+    resultsEl.style.display = "none";
+    listEl.innerHTML = "";
+
+    const url = endpoint + "?action=lookup&candidate=" + encodeURIComponent(candidate) + "&pin=" + encodeURIComponent(pin);
+    const res = await fetch(url, { method: "GET" });
+    const text = await res.text();
+
+    let json;
+    try { json = JSON.parse(text); } catch (e) { json = { ok: false, message: "Bad response from server.", raw: text }; }
+
+    if (!json.ok) {
+      setStatus(json.message || "Not found.", "err");
+      return;
+    }
+
+    setStatus("Loaded.", "ok");
+    resultsEl.style.display = "block";
+
+    const when = json.submittedAtIso ? new Date(json.submittedAtIso).toLocaleString() : "";
+    metaEl.textContent = "Candidate " + candidate + ". " + when;
+
+    const qs = Array.isArray(json.questions) ? json.questions : [];
+    const imgs = Array.isArray(json.images) ? json.images : [];
+
+    const n = Math.min(qs.length, imgs.length);
+    for (let i = 0; i < n; i++) {
+      const div = document.createElement("div");
+      div.className = "item";
+      div.innerHTML =
+        "<div class=\"q\">" + (i + 1) + ". " + escapeHtml(qs[i]) + "</div>" +
+        "<img src=\"" + escapeHtml(imgs[i]) + "\" alt=\"Answer " + (i + 1) + "\" />";
+      listEl.appendChild(div);
+    }
+  }
+
+  btnLoad.addEventListener("click", () => lookup());
+</script>
+</body>
+</html>
