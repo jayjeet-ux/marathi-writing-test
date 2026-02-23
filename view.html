@@ -33,9 +33,6 @@
       <label>PIN</label>
       <input id="pin" inputmode="numeric" />
 
-      <label>Apps Script Web App URL</label>
-      <input id="endpoint" placeholder="Paste your Apps Script Web App URL here" />
-
       <button id="btnLoad">Load</button>
 
       <div id="status" class="muted" style="margin-top:12px;"></div>
@@ -48,9 +45,10 @@
   </div>
 
 <script>
+  const ENDPOINT = "https://script.google.com/macros/s/AKfycbz2nl0oVERYJXgr5cw7eeybwkQ_MgOtl5STlTD4GmpzWJoZuDNJ-y75RAYUE9ufuSnVqA/exec";
+
   const candidateNumberEl = document.getElementById("candidateNumber");
   const pinEl = document.getElementById("pin");
-  const endpointEl = document.getElementById("endpoint");
   const btnLoad = document.getElementById("btnLoad");
   const statusEl = document.getElementById("status");
   const resultsEl = document.getElementById("results");
@@ -71,9 +69,8 @@
   async function lookup() {
     const candidate = candidateNumberEl.value.trim();
     const pin = pinEl.value.trim();
-    const endpoint = endpointEl.value.trim();
-    if (!candidate || !pin || !endpoint) {
-      setStatus("Enter candidate number, PIN, and the Apps Script URL.", "err");
+    if (!candidate || !pin) {
+      setStatus("Enter candidate number and PIN.", "err");
       return;
     }
 
@@ -81,7 +78,7 @@
     resultsEl.style.display = "none";
     listEl.innerHTML = "";
 
-    const url = endpoint + "?action=lookup&candidate=" + encodeURIComponent(candidate) + "&pin=" + encodeURIComponent(pin);
+    const url = ENDPOINT + "?action=lookup&candidate=" + encodeURIComponent(candidate) + "&pin=" + encodeURIComponent(pin);
     const res = await fetch(url, { method: "GET" });
     const text = await res.text();
 
