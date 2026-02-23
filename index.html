@@ -48,11 +48,6 @@
 
       <div class="divider"></div>
 
-      <label>Apps Script Web App URL</label>
-      <input id="endpoint" placeholder="Paste your Apps Script Web App URL here" />
-
-      <div class="divider"></div>
-
       <div class="row">
         <button id="btnStart">Start</button>
       </div>
@@ -102,6 +97,8 @@
   </div>
 
 <script>
+  const ENDPOINT = "https://script.google.com/macros/s/AKfycbz2nl0oVERYJXgr5cw7eeybwkQ_MgOtl5STlTD4GmpzWJoZuDNJ-y75RAYUE9ufuSnVqA/exec";
+
   const SENTENCE_BANK_60 = [
     "I drink milk.",
     "I go to school.",
@@ -174,7 +171,6 @@
 
   const candidateNumberEl = document.getElementById("candidateNumber");
   const pinEl = document.getElementById("pin");
-  const endpointEl = document.getElementById("endpoint");
 
   const btnStart = document.getElementById("btnStart");
   const btnExit = document.getElementById("btnExit");
@@ -290,16 +286,14 @@
   function validateStart() {
     const candidate = candidateNumberEl.value.trim();
     const pin = pinEl.value.trim();
-    const endpoint = endpointEl.value.trim();
     if (!candidate) return false;
     if (!pin) return false;
-    if (!endpoint) return false;
     return true;
   }
 
   btnStart.addEventListener("click", () => {
     if (!validateStart()) {
-      alert("Enter candidate number, PIN, and the Apps Script URL.");
+      alert("Enter candidate number and PIN.");
       return;
     }
     selectedQuestions = pickQuestions();
@@ -348,7 +342,6 @@
   });
 
   function buildAndSubmitForm_() {
-    const endpoint = endpointEl.value.trim();
     const candidateNumber = candidateNumberEl.value.trim();
     const pin = pinEl.value.trim();
 
@@ -358,7 +351,7 @@
 
     const form = document.createElement("form");
     form.method = "POST";
-    form.action = endpoint;
+    form.action = ENDPOINT;
     form.target = "hidden_iframe";
 
     const addField = (name, value) => {
@@ -405,7 +398,6 @@
         btnSubmit.disabled = false;
         return;
       }
-
       statusLine.textContent = "Submitted. Check Drive in about 10 seconds.";
       statusLine.className = "ok";
     } catch (e) {
