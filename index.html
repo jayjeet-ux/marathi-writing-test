@@ -1,3 +1,4 @@
+<!-- index.html -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -346,7 +347,7 @@
     }
   });
 
-  async function submitAll() {
+  function buildAndSubmitForm_() {
     const endpoint = endpointEl.value.trim();
     const candidateNumber = candidateNumberEl.value.trim();
     const pin = pinEl.value.trim();
@@ -355,24 +356,40 @@
       if (!answersDataUrls[i]) return { ok: false, message: "Missing answer for question " + (i + 1) + "." };
     }
 
-    const payload = {
-      candidateNumber,
-      pin,
-      submittedAtIso: new Date().toISOString(),
-      questions: selectedQuestions,
-      imagesDataUrl: answersDataUrls
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = endpoint;
+    form.target = "hidden_iframe";
+
+    const addField = (name, value) => {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = name;
+      input.value = value;
+      form.appendChild(input);
     };
 
-    const res = await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
+    addField("candidateNumber", candidateNumber);
+    addField("pin", pin);
+    addField("submittedAtIso", new Date().toISOString());
+    addField("questionsJson", JSON.stringify(selectedQuestions));
+    addField("imagesJson", JSON.stringify(answersDataUrls));
 
-    const text = await res.text();
-    let json;
-    try { json = JSON.parse(text); } catch (e) { json = { ok: false, message: "Bad response from server.", raw: text }; }
-    return json;
+    document.body.appendChild(form);
+
+    let iframe = document.getElementById("hidden_iframe");
+    if (!iframe) {
+      iframe = document.createElement("iframe");
+      iframe.name = "hidden_iframe";
+      iframe.id = "hidden_iframe";
+      iframe.style.display = "none";
+      document.body.appendChild(iframe);
+    }
+
+    form.submit();
+    form.remove();
+
+    return { ok: true };
   }
 
   btnSubmit.addEventListener("click", async () => {
@@ -381,17 +398,16 @@
     statusLine.className = "muted";
 
     try {
-      const result = await submitAll();
-      if (result && result.ok) {
-        statusLine.textContent = "Submitted successfully.";
-        statusLine.className = "ok";
-        if (result.folderUrl) {
-          try { await navigator.clipboard.writeText(result.folderUrl); } catch (e) {}
-        }
-      } else {
-        statusLine.textContent = (result && result.message) ? result.message : "Submit failed.";
+      const r = buildAndSubmitForm_();
+      if (!r.ok) {
+        statusLine.textContent = r.message || "Submit failed.";
         statusLine.className = "err";
+        btnSubmit.disabled = false;
+        return;
       }
+
+      statusLine.textContent = "Submitted. Check Drive in about 10 seconds.";
+      statusLine.className = "ok";
     } catch (e) {
       statusLine.textContent = "Submit failed.";
       statusLine.className = "err";
